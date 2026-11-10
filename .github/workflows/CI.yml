@@ -11,7 +11,8 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [master]
+    # dev/own-library: temporary, until the fork has a workflow to dispatch; not for the PR
+    branches: [master, dev/own-library]
     tags: ['libs-v*']
   workflow_dispatch:
     inputs:
