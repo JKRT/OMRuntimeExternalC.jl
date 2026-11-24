@@ -1,0 +1,49 @@
+name: Yggdrasil recipe
+
+# Fork-only check of deps/Yggdrasil/build_tarballs.jl: builds every platform with Yggdrasil's own
+# BinaryBuilder environment (.ci/bb1_project) and uploads the tarballs. Not part of the package.
+on:
+  workflow_dispatch:
+  push:
+    branches: ['dev/yggdrasil-jll']
+    paths: ['deps/Yggdrasil/**', '.github/workflows/yggdrasil.yml']
+
+jobs:
+  build:
+    if: github.repository_owner == 'JKRT'
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: JuliaPackaging/Yggdrasil
+          path: yggdrasil
+          fetch-depth: 1
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.13.2'
+      - name: Free disk space, allow user namespaces
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          df -h /
+      - name: Instantiate BinaryBuilder
+        run: julia --project=yggdrasil/.ci/bb1_project -e 'using Pkg; Pkg.instantiate()'
+      - name: Build all platforms
+        shell: bash  # -eo pipefail: a failed build fails the step despite tee
+        env:
+          BINARYBUILDER_AUTOMATIC_APPLE: 'true'
+        run: |
+          mkdir -p yggdrasil/M/ModelicaExternalC
+          cp deps/Yggdrasil/build_tarballs.jl yggdrasil/M/ModelicaExternalC/
+          cd yggdrasil/M/ModelicaExternalC
+          julia --project=../../.ci/bb1_project build_tarballs.jl --verbose 2>&1 | tee build.log
+          ls -l products
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ModelicaExternalC-products
+          path: |
+            yggdrasil/M/ModelicaExternalC/products/
+            yggdrasil/M/ModelicaExternalC/build.log
