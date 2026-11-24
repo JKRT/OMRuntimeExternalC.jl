@@ -38,8 +38,9 @@ jobs:
           mkdir -p yggdrasil/M/ModelicaExternalC
           cp deps/Yggdrasil/build_tarballs.jl yggdrasil/M/ModelicaExternalC/
           cd yggdrasil/M/ModelicaExternalC
-          julia --project=../../.ci/bb1_project build_tarballs.jl --verbose 2>&1 | tee build.log
+          julia --project=../../.ci/bb1_project build_tarballs.jl --verbose --deploy=local 2>&1 | tee build.log
           ls -l products
+          cp -r ~/.julia/dev/ModelicaExternalC_jll products/ModelicaExternalC_jll
       - uses: actions/upload-artifact@v4
         if: always()
         with:
