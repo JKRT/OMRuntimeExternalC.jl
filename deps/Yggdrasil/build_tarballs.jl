@@ -33,8 +33,11 @@ install_license ModelicaStandardLibrary/LICENSE OMRuntimeExternalC.jl/LICENSE.md
 
 platforms = supported_platforms()
 
+# dont_dlopen: OMRuntimeExternalC.jl loads the library itself, with RTLD_GLOBAL (compiled external C
+# code of a Modelica model calls ModelicaError etc. from it), and only one copy: the JLL's, or a local
+# build the user points it to.
 products = [
-    LibraryProduct("libModelicaExternalC", :libModelicaExternalC),
+    LibraryProduct("libModelicaExternalC", :libModelicaExternalC; dont_dlopen = true),
 ]
 
 dependencies = Dependency[]
