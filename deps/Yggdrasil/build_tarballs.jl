@@ -1,32 +1,34 @@
-# Draft of the Yggdrasil recipe for ModelicaExternalC_jll (https://github.com/JuliaPackaging/Yggdrasil),
-# not submitted: it builds libModelicaExternalC with the script of this package, for every platform.
-# The sources are the Modelica Standard Library C sources (tag v4.1.0) and this package, at the commit
-# with src/C/ModelicaCallbacks.c and deps/build_libraries.sh. Replace <commit> before use.
+# Note that this script can accept some limited command-line arguments, run
+# `julia build_tarballs.jl --help` to see a usage message.
 #
-# With a JLL the package would load the library from ModelicaExternalC_jll (libModelicaExternalC,
-# libModelicaExternalC_path) in place of the artifact of Artifacts.toml; src/Library.jl is the only file
-# that would change.
+# libModelicaExternalC: the external C functions of the Modelica Standard Library (tables, strings,
+# I/O, MAT files, random numbers, FFT) and an implementation of ModelicaUtilities.h, in one shared
+# library. Built by the script of OMRuntimeExternalC.jl (deps/build_libraries.sh), which compiles the
+# MSL C sources with the shim src/C/ModelicaCallbacks.c. The library links only the platform's libc.
 using BinaryBuilder, Pkg
 
 name = "ModelicaExternalC"
-version = v"4.1.0"
+version = v"4.1.0"  # the Modelica Standard Library release of the C sources
 
 sources = [
+    # modelica/ModelicaStandardLibrary, tag v4.1.0
     GitSource("https://github.com/modelica/ModelicaStandardLibrary.git",
               "8ae3d35c24e519cb2996cab20f3b13daf2b0c50a"),
-    GitSource("https://github.com/OpenModelica/OMRuntimeExternalC.jl.git", "<commit>"),
+    # OpenModelica/OMRuntimeExternalC.jl: deps/build_libraries.sh and src/C/ModelicaCallbacks.c
+    GitSource("https://github.com/OpenModelica/OMRuntimeExternalC.jl.git",
+              "fff32815408fcfb9ff3f578c35a8891964555674"),
 ]
 
 script = raw"""
 cd ${WORKSPACE}/srcdir
 case "${target}" in
-  *-apple-*)     export TARGET_OS=Darwin ;;
-  *-mingw*)      export TARGET_OS=MINGW ;;
-  *)             export TARGET_OS=Linux ;;
+  *-apple-*) export TARGET_OS=Darwin ;;
+  *-mingw*)  export TARGET_OS=MINGW ;;
+  *)         export TARGET_OS=Linux ;;  # Linux (glibc, musl) and FreeBSD: ELF, the same linker flags
 esac
 OMRuntimeExternalC.jl/deps/build_libraries.sh ModelicaStandardLibrary/Modelica/Resources/C-Sources build
-install -Dm755 build/libModelicaExternalC.* -t "${libdir}"
-install_license OMRuntimeExternalC.jl/LICENSE.md OMRuntimeExternalC.jl/THIRD_PARTY_LICENSES.md
+install -Dvm755 "build/libModelicaExternalC.${dlext}" "${libdir}/libModelicaExternalC.${dlext}"
+install_license ModelicaStandardLibrary/LICENSE OMRuntimeExternalC.jl/LICENSE.md OMRuntimeExternalC.jl/THIRD_PARTY_LICENSES.md
 """
 
 platforms = supported_platforms()
